@@ -4,7 +4,7 @@ from fastapi.exceptions import RequestValidationError
 
 import service
 import exceptions
-from fastapi_classes import Pipeline
+from models import Pipeline
 from typing import Any
 
 app = FastAPI()
@@ -21,10 +21,6 @@ async def error_middleware(request: Request, call_next):
         return await call_next(request)
     except exceptions.PipelineNameConflictException as e:
         return JSONResponse(status_code=409, content=e.args[0])
-    except exceptions.InvalidStageKeyException as e:
-        return JSONResponse(status_code=422, content=e.args[0])
-    except exceptions.InvalidStageNumerationException as e:
-        return JSONResponse(status_code=422, content=e.args[0])
     except exceptions.NoStageException as e:
         return JSONResponse(status_code=422, content=e.args[0])
     except exceptions.QueryParameterException as e:
@@ -41,8 +37,11 @@ async def create_pipeline(pipeline: Pipeline):
 
 
 @app.get("/pipeline")
-async def get_pipeline(pipeline: Pipeline):
-    return service.create_pipeline(pipeline)
+async def get_pipeline(request: Request):
+    if not request.query_params.get('pipeline_name'):
+        raise exceptions.QueryParameterException("No pipeline_name in query")
+    pipeline_name = request.query_params.get('pipeline_name')
+    return service.get_pipeline(pipeline_name)
 
 
 @app.post("/job")

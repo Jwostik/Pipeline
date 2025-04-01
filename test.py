@@ -1,10 +1,10 @@
-from testcontainers.postgres import PostgresContainer
-from fastapi.testclient import TestClient
-
-import os, pytest
+import os
+import pytest
 
 import psycopg2
 import psycopg2.pool
+from fastapi.testclient import TestClient
+from testcontainers.postgres import PostgresContainer
 
 import database
 from pipeline_routes import app
@@ -36,26 +36,25 @@ def create_tables():
         with conn.cursor() as cur:
             cur.execute("""
                 create table pipelines (
-                    pipeline_id serial primary key, 
+                    pipeline_id bigserial primary key, 
                     pipeline_name text unique);
                 create table stages (
-                    stage_id serial primary key, 
-                    pipeline_id int references pipelines(pipeline_id), 
-                    next_stage int references stages(stage_id), 
-                    index_in_pipeline int, 
+                    stage_id bigserial primary key, 
+                    pipeline_id bigint references pipelines(pipeline_id), 
+                    index_in_pipeline bigint, 
                     type text, 
-                    params json);
-                alter table pipelines add column first_stage int references stages(stage_id);
+                    params jsonb);
+                alter table pipelines add column first_stage bigint references stages(stage_id);
                 create table jobs_status (
-                    job_status_id serial primary key, 
-                    pipeline_id int references pipelines(pipeline_id), 
-                    stage_id int references stages(stage_id), 
+                    job_status_id bigserial primary key, 
+                    pipeline_id bigint references pipelines(pipeline_id), 
+                    stage_id bigint references stages(stage_id), 
                     job_status text, 
                     job_error text, 
-                    data json, 
+                    data jsonb, 
                     started boolean);
                 create table queue (
-                    job_status_id int references jobs_status(job_status_id));
+                    job_status_id bigint references jobs_status(job_status_id));
                 """)
             conn.commit()
 
@@ -116,75 +115,6 @@ def test_insert_pipeline_without_stages():
         assert response.json == "Invalid request"
 
 
-def test_insert_pipeline_with_bad_stage_key():
-    body = {
-        "pipeline_name": "Authorization",
-        "stages": {
-            "bad_key":
-                {
-                    "type": "HTTP",
-                    "params":
-                        {
-                            "url_path": "server.com/users/${path1}",
-                            "method": "POST",
-                            "body": '{"login": ".login", "password": ".password"}',
-                            "return_value":
-                                {
-                                    "user_id": ".user_id"
-                                },
-                            "return_codes": [200]
-                        }
-                }
-        }
-    }
-    with pytest.raises(Exception):
-        response = client.post("/pipeline", json=body)
-        assert response.status_code == 422
-        assert response.json == "Invalid stage key: bad_key"
-
-
-def test_insert_pipeline_with_bad_stage_numeration():
-    body = {
-        "pipeline_name": "Authorization",
-        "stages": {
-            "1":
-                {
-                    "type": "HTTP",
-                    "params":
-                        {
-                            "url_path": "server.com/users/${path1}",
-                            "method": "POST",
-                            "body": '{"login": ".login", "password": ".password"}',
-                            "return_value":
-                                {
-                                    "user_id": ".user_id"
-                                },
-                            "return_codes": [200]
-                        }
-                },
-            "3":
-                {
-                    "type": "HTTP",
-                    "params":
-                        {
-                            "url_path": "server.com/users/${path1}",
-                            "method": "POST",
-                            "body": '{"login": ".login", "password": ".password"}',
-                            "return_value":
-                                {
-                                    "user_id": ".user_id"
-                                },
-                            "return_codes": [200]
-                        }
-                }
-        }
-    }
-    with pytest.raises(Exception):
-        response = client.post("/pipeline", json=body)
-        assert response.status_code == 422
-        assert response.json == "Invalid stage key: bad_key"
-
-
 def test_insert_pipeline_with_bad_fields():
     body = {
         "bad_field": "Authorization",
@@ -216,38 +146,36 @@ def test_correct_insert_pipeline():
     body = {
         "pipeline_name": "Authorization",
         "stages":
-            {
-                "1":
-                    {
-                        "type": "HTTP",
-                        "params":
-                            {
-                                "url_path": "server.com/users/${path1}",
-                                "method": "POST",
-                                "body": '{"login": ".login", "password": ".password"}',
-                                "return_value":
-                                    {
-                                        "user_id": ".user_id"
-                                    },
-                                "return_codes": [200]
-                            }
-                    },
-                "2":
-                    {
-                        "type": "HTTP",
-                        "params":
-                            {
-                                "url_path": "server.com/auth",
-                                "method": "POST",
-                                "body": '{"user_id": ".user_id"}',
-                                "return_value":
-                                    {
-                                        "jwt": ".jwt"
-                                    },
-                                "return_codes": [200]
-                            }
-                    }
-            }
+            [
+                {
+                    "type": "HTTP",
+                    "params":
+                        {
+                            "url_path": "server.com/users/${path1}",
+                            "method": "POST",
+                            "body": '{"login": ".login", "password": ".password"}',
+                            "return_value":
+                                {
+                                    "user_id": ".user_id"
+                                },
+                            "return_codes": [200]
+                        }
+                },
+                {
+                    "type": "HTTP",
+                    "params":
+                        {
+                            "url_path": "server.com/auth",
+                            "method": "POST",
+                            "body": '{"user_id": ".user_id"}',
+                            "return_value":
+                                {
+                                    "jwt": ".jwt"
+                                },
+                            "return_codes": [200]
+                        }
+                }
+            ]
     }
     response = client.post("/pipeline", json=body)
     assert response.status_code == 200
@@ -375,6 +303,11 @@ def test_invalid_job_body():
         response = client.post("/job?pipeline_name=Authorization", json=job_body)
         assert response.status_code == 400
         assert response.json == "Invalid request"
+    job_body = None
+    with pytest.raises(Exception):
+        response = client.post("/job?pipeline_name=Authorization", json=job_body)
+        assert response.status_code == 400
+        assert response.json == "Invalid request"
 
 
 def test_start_job_without_query():
@@ -448,3 +381,17 @@ def test_status_in_process_job():
     response = client.get("/job?job_id=1")
     assert response.status_code == 200
     assert response.content == b'"Job Authorization in process on stage 2"'
+
+
+@insert_correct_pipeline
+def test_get_pipeline():
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("select type from stages")
+            b, = cur.fetchall()
+            for a in b:
+                print(a)
+    # response = client.get("/pipeline?pipeline_name=Authorization")
+    # print(response)
+    # assert response.status_code == 200
+    # assert response.content == b'"Job Authorization in process on stage 2"'

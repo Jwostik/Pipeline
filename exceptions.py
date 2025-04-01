@@ -1,11 +1,3 @@
-class InvalidStageNumerationException(Exception):
-    pass
-
-
-class InvalidStageKeyException(Exception):
-    pass
-
-
 class NoStageException(Exception):
     pass
 
