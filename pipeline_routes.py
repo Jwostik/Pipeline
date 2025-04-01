@@ -1,5 +1,4 @@
 from fastapi import FastAPI, Request
-import uvicorn
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 
@@ -8,28 +7,12 @@ import exceptions
 from fastapi_classes import Pipeline
 from typing import Any
 
-
 app = FastAPI()
 
 
 @app.exception_handler(RequestValidationError)
 async def custom_form_validation_error(request, exc):
     return JSONResponse(status_code=400, content="Invalid request")
-
-
-@app.middleware("http")
-async def query_validation_middleware(request: Request, call_next):
-    if request.url.path == "/job":
-        if request.method == 'POST':
-            if not request.query_params.get('pipeline_name'):
-                raise exceptions.QueryParameterException("No pipeline_name in query")
-        if request.method == 'GET':
-            if not request.query_params.get('job_id'):
-                raise exceptions.QueryParameterException("No job_id in query")
-            job_id = request.query_params.get('job_id')
-            if not job_id.isdigit():
-                raise exceptions.QueryParameterException("job_id must be integer")
-    return await call_next(request)
 
 
 @app.middleware("http")
@@ -57,17 +40,25 @@ async def create_pipeline(pipeline: Pipeline):
     return service.create_pipeline(pipeline)
 
 
+@app.get("/pipeline")
+async def get_pipeline(pipeline: Pipeline):
+    return service.create_pipeline(pipeline)
+
+
 @app.post("/job")
 async def start_job(request: Request, body: dict[str, Any]):
+    if not request.query_params.get('pipeline_name'):
+        raise exceptions.QueryParameterException("No pipeline_name in query")
     pipeline_name = request.query_params.get('pipeline_name')
     return service.start_job(body, pipeline_name)
 
 
 @app.get("/job")
 async def get_status_job(request: Request):
+    if not request.query_params.get('job_id'):
+        raise exceptions.QueryParameterException("No job_id in query")
+    job_id = request.query_params.get('job_id')
+    if not job_id.isdigit():
+        raise exceptions.QueryParameterException("job_id must be integer")
     job_id = request.query_params.get('job_id')
     return service.get_status_job(int(job_id))
-
-
-if __name__ == '__main__':
-    uvicorn.run(app)

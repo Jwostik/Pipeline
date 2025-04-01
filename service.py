@@ -16,6 +16,10 @@ def create_pipeline(pipeline: Pipeline) -> int:
         return pipeline_id
 
 
+def get_pipeline():
+    pass
+
+
 def start_job(job_body: dict[str, Any], pipeline_name: str) -> int:
     pipeline_id, first_stage = database.get_pipeline_id_and_first_stage_by_pipeline_name(pipeline_name)
     jobs_status_id = database.create_job(pipeline_id, first_stage, job_body)

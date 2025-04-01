@@ -1,8 +1,10 @@
 import json
 
-from fastapi_classes import Stage
-import psycopg2.pool, psycopg2.errors
+import psycopg2.errors
+import psycopg2.pool
+
 import exceptions
+from fastapi_classes import Stage
 
 pool = psycopg2.pool.SimpleConnectionPool(1, 5, user='postgres', password='postgres', database='tester')
 
