@@ -53,6 +53,13 @@ paths:
       summary: Get info about existing pipeline
       description: Get info about existing  pipeline
       operationId: get_pipeline
+      parameters:
+          - name: pipeline_name
+            in: query
+            description: Name of pipeline that needs to be started
+            required: true
+            schema:
+              type: string
       responses:
         '200':
           description: Info about existing pipeline
@@ -80,7 +87,7 @@ paths:
         - jobs
       summary: Start job with existing pipeline
       description: Start job with existing pipeline
-      operationId: start_pipeline_by_name
+      operationId: start_job
       parameters:
           - name: pipeline_name
             in: query
@@ -123,7 +130,7 @@ paths:
         - jobs
       summary: Status of runned job
       description: Status of runned job
-      operationId: status_job_by_id
+      operationId: get_status_job
       parameters:
         - name: job_id
           in: query
