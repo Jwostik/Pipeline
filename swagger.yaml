@@ -1,0 +1,295 @@
+openapi: 3.0.3
+info:
+  title: Pipeline service
+  description: 
+    This is a pipeline service that can create pipelines, start them and get status of runned job.
+
+  version: 1.0.0
+tags:
+  - name: pipelines
+    description: Everything about pipelines
+  - name: jobs
+    description: Everything about jobs
+paths:
+  /pipeline:
+    post:
+      tags:
+        - pipelines
+      summary: Create new pipeline
+      description: Create new pipeline
+      operationId: create_pipeline
+      requestBody:
+        description: Create new pipeline
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Pipeline'
+        required: true
+      responses:
+        '200':
+          description: Id of created pipeline
+          content:
+            application/json:
+              schema:
+                type: integer
+                example: 1
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                type: string
+                example: Invalid request
+        '409':
+          description: Conflict name of pipeline
+          content:
+            application/json:
+              schema:
+                type: string
+                example: Name of pipeline has already used
+    get:
+      tags:
+        - pipelines
+      summary: Get info about existing pipeline
+      description: Get info about existing  pipeline
+      operationId: get_pipeline
+      responses:
+        '200':
+          description: Info about existing pipeline
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pipeline'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                type: string
+                example: Invalid request
+        '422':
+          description: Validation exception
+          content:
+            application/json:
+              schema:
+                type: string
+                example: No pipeline_name in query
+  /job:
+    post:
+      tags:
+        - jobs
+      summary: Start job with existing pipeline
+      description: Start job with existing pipeline
+      operationId: start_pipeline_by_name
+      parameters:
+          - name: pipeline_name
+            in: query
+            description: Name of pipeline that needs to be started
+            required: true
+            schema:
+              type: string
+      requestBody:
+        description: Start job with existing pipeline
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartJobSchema'
+        required: true
+      responses:
+        '200':
+          description: Id of created job
+          content:
+            application/json:
+              schema:
+                type: integer
+                description: ID started job
+                example: 10
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                type: string
+                example: Invalid request
+        '422':
+          description: Validation exception
+          content:
+            application/json:
+              schema:
+                type: string
+                example: No pipeline_name in query
+    get:
+      tags:
+        - jobs
+      summary: Status of runned job
+      description: Status of runned job
+      operationId: status_job_by_id
+      parameters:
+        - name: job_id
+          in: query
+          description: Id of runned job
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Status of job
+          content:
+            application/json:
+              schema:
+                type: object
+                oneOf:
+                  - $ref: '#/components/schemas/SuccessEndedJob'
+                  - $ref: '#/components/schemas/JobEndedWithError'
+                  - $ref: '#/components/schemas/JobInProcess'
+                  - $ref: '#/components/schemas/JobWaiting'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                type: string
+                example: Invalid request
+        '422':
+          description: Validation exception
+          content:
+            application/json:
+              schema:
+                type: string
+                example: No job_id in query
+
+
+components:
+  schemas:
+    Pipeline:
+      type: object
+      required:
+        - pipeline_name
+        - stages
+      properties:
+        pipeline_name:
+          type: string
+          maxLength: 50
+          description: Name of pipeline
+          example: Authorization
+        stages:
+          type: object
+          description: Description of every stage in pipeline with its order number as key
+          additionalProperties:
+            $ref: '#/components/schemas/Stage'
+          example:
+            - type: HTTP
+              params:
+                url_path: server.com/users
+                method: POST
+                body: '
+                  "login": ".login",
+                  "password": ".password"'
+                return_values:
+                  "user_id": ".user_id"
+                return_codes: [200]
+            - type: HTTP
+              params:
+                url_path: server.com/auth
+                method: POST
+                body: '
+                  "user_id": ".user_id"'
+                return_values:
+                  "jwt": ".jwt"
+                return_codes: [200]
+
+    Stage:
+      type: object
+      required:
+        - type
+        - params
+      properties:
+        type:
+          type: string
+          maxLength: 50
+          description: Type of stage
+          enum:
+            - HTTP
+          example: HTTP
+        params:
+          type: object
+          description: Parameters of stage
+          oneOf:
+            - $ref: '#/components/schemas/HTTPStage'
+    HTTPStage:
+      type: object
+      required:
+        - url_path
+        - method
+        - return_codes
+      properties:
+        url_path:
+          type: string
+          maxLength: 50
+          description: URL-path to service
+          example: server.com/users
+        method:
+          type: string
+          description: HTTP-method of request
+          enum:
+            - POST
+            - GET
+          example: POST
+        body:
+          type: string
+          description: String with jq filters needed to convert data needed in stage from incoming data
+          example:
+            " \"data_key1\": \".data_filter1\", \"data_key2\": \".data_filter2\""
+        path_params:
+          type: string
+          description: String with jq filters needed to convert path params of stage from incoming data
+          example:
+            " \"path_key1\": \".path_filter1\", \"path_key2\": \".path_filter2\""
+        query_params:
+          type: string
+          description: String with jq filters needed to convert query params of stage from incoming data
+          example:
+            " \"query_key1\": \".query_filter1\", \"query_key2\": \".query_filter2\""
+        return_values:
+          type: object
+          description: HashMap of keys of return values of stage with jq filters needed to transform them to data sended to next stage
+          additionalProperties:
+            type: string
+            maxLength: 50
+          example:
+            "return_value_key1": ".return_filter1"
+            "return_value_key2": ".return_filter2"
+        return_codes:
+          type: array
+          description: Correct HTTP-responce codes to continue execute stages
+          items:
+            type: integer
+          example: [200, 201]
+    StartJobSchema:
+      type: object
+      additionalProperties:
+        type: string
+        maxLength: 50
+      description:  Key/value for input data
+      example:
+        path_key1: "path_value1"
+        path_key2: "path_value2"
+        query_key1: "query_value1"
+        query_key2: "query_value2"
+        data_key1: "data_value1"
+        data_key2: "data_value2"
+    SuccessEndedJob:
+      type: string
+      example: Success
+    JobInProcess:
+      type: string
+      description: Message about processing job with id of current executing stage
+      example: Job MyJob in process on stage 2
+    JobEndedWithError:
+      type: string
+      description: Error message
+      example: Can't insert into database via conflict name
+    JobWaiting:
+      type: string
+      description: Message about processing job with id of current stage
+      example: Job MyJob waiting on stage 2

@@ -1,12 +1,14 @@
+import json
 import os
 import pytest
+from pypika import Query
 
 import psycopg2
 import psycopg2.pool
 from fastapi.testclient import TestClient
 from testcontainers.postgres import PostgresContainer
 
-import database
+import database.db_connection
 from pipeline_routes import app
 
 client = TestClient(app)
@@ -27,7 +29,7 @@ def replace_pool():
     username = os.getenv("DB_USERNAME")
     password = os.getenv("DB_PASSWORD")
     dbname = os.getenv("DB_NAME")
-    database.pool = psycopg2.pool.SimpleConnectionPool(1, 5,
+    database.db_connection.pool = psycopg2.pool.SimpleConnectionPool(1, 5,
                                                        f"host={host} dbname={dbname} user={username} password={password} port={port}")
 
 
@@ -41,15 +43,16 @@ def create_tables():
                 create table stages (
                     stage_id bigserial primary key, 
                     pipeline_id bigint references pipelines(pipeline_id), 
-                    index_in_pipeline bigint, 
-                    type text, 
-                    params jsonb);
+                    index_in_pipeline int, 
+                    type stage_type, 
+                    params jsonb,
+                    unique (pipeline_id, index_in_pipeline));
                 alter table pipelines add column first_stage bigint references stages(stage_id);
                 create table jobs_status (
                     job_status_id bigserial primary key, 
                     pipeline_id bigint references pipelines(pipeline_id), 
                     stage_id bigint references stages(stage_id), 
-                    job_status text, 
+                    job_status status_text, 
                     job_error text, 
                     data jsonb, 
                     started boolean);
@@ -82,13 +85,18 @@ def setup(request):
         postgres.stop()
 
     request.addfinalizer(remove_container)
-    os.environ["DB_CONN"] = postgres.get_connection_url()
     os.environ["DB_HOST"] = postgres.get_container_host_ip()
     os.environ["DB_PORT"] = postgres.get_exposed_port(5432)
     os.environ["DB_USERNAME"] = postgres.username
     os.environ["DB_PASSWORD"] = postgres.password
     os.environ["DB_NAME"] = postgres.dbname
     replace_pool()
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                CREATE TYPE stage_type AS ENUM ('HTTP');
+                CREATE TYPE status_text AS ENUM ('waiting', 'in process', 'success', 'error');
+                """)
 
 
 @pytest.fixture(scope="function", autouse=True)
@@ -111,7 +119,7 @@ def test_insert_pipeline_without_stages():
         "stages": {}}
     with pytest.raises(Exception):
         response = client.post("/pipeline", json=body)
-        assert response.status_code == 422
+        assert response.status_code == 400
         assert response.json == "Invalid request"
 
 
@@ -142,8 +150,7 @@ def test_insert_pipeline_with_bad_fields():
         assert response.json == "Invalid request"
 
 
-def test_correct_insert_pipeline():
-    body = {
+correct_body = {
         "pipeline_name": "Authorization",
         "stages":
             [
@@ -154,7 +161,7 @@ def test_correct_insert_pipeline():
                             "url_path": "server.com/users/${path1}",
                             "method": "POST",
                             "body": '{"login": ".login", "password": ".password"}',
-                            "return_value":
+                            "return_values":
                                 {
                                     "user_id": ".user_id"
                                 },
@@ -168,7 +175,7 @@ def test_correct_insert_pipeline():
                             "url_path": "server.com/auth",
                             "method": "POST",
                             "body": '{"user_id": ".user_id"}',
-                            "return_value":
+                            "return_values":
                                 {
                                     "jwt": ".jwt"
                                 },
@@ -177,94 +184,24 @@ def test_correct_insert_pipeline():
                 }
             ]
     }
-    response = client.post("/pipeline", json=body)
+
+def test_correct_insert_pipeline():
+    response = client.post("/pipeline", json=correct_body)
     assert response.status_code == 200
     assert response.json() == 1
 
 
 def test_insert_pipeline_with_same_name():
-    body = {
-        "pipeline_name": "Authorization",
-        "stages":
-            {
-                "1":
-                    {
-                        "type": "HTTP",
-                        "params":
-                            {
-                                "url_path": "server.com/users/${path1}",
-                                "method": "POST",
-                                "body": '{"login": ".login", "password": ".password"}',
-                                "return_value":
-                                    {
-                                        "user_id": ".user_id"
-                                    },
-                                "return_codes": [200]
-                            }
-                    },
-                "2":
-                    {
-                        "type": "HTTP",
-                        "params":
-                            {
-                                "url_path": "server.com/auth",
-                                "method": "POST",
-                                "body": '{"user_id": ".user_id"}',
-                                "return_value":
-                                    {
-                                        "jwt": ".jwt"
-                                    },
-                                "return_codes": [200]
-                            }
-                    }
-            }
-    }
-    client.post("/pipeline", json=body)
+    client.post("/pipeline", json=correct_body)
     with pytest.raises(Exception):
-        response = client.post("/pipeline", json=body)
+        response = client.post("/pipeline", json=correct_body)
         assert response.status_code == 409
         assert response.json == "Name of pipeline has already used"
 
 
 def insert_correct_pipeline(func):
     def wrapper(*args, **kwargs):
-        body = {
-            "pipeline_name": "Authorization",
-            "stages":
-                {
-                    "1":
-                        {
-                            "type": "HTTP",
-                            "params":
-                                {
-                                    "url_path": "server.com/users/${path1}",
-                                    "method": "POST",
-                                    "body": '{"login": ".login", "password": ".password"}',
-                                    "return_value":
-                                        {
-                                            "user_id": ".user_id"
-                                        },
-                                    "return_codes": [200]
-                                }
-                        },
-                    "2":
-                        {
-                            "type": "HTTP",
-                            "params":
-                                {
-                                    "url_path": "server.com/auth",
-                                    "method": "POST",
-                                    "body": '{"user_id": ".user_id"}',
-                                    "return_value":
-                                        {
-                                            "jwt": ".jwt"
-                                        },
-                                    "return_codes": [200]
-                                }
-                        }
-                }
-        }
-        client.post("/pipeline", json=body)
+        client.post("/pipeline", json=correct_body)
         result = func(*args, **kwargs)
         return result
 
@@ -377,7 +314,7 @@ def test_status_waiting_job():
 def test_status_in_process_job():
     with get_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute("insert into jobs_status (job_status, pipeline_id, stage_id) values ('in process', 1, 2)")
+            cur.execute(Query.into('jobs_status').columns('job_status', 'pipeline_id', 'stage_id').insert('in process', 1, 2).get_sql())
     response = client.get("/job?job_id=1")
     assert response.status_code == 200
     assert response.content == b'"Job Authorization in process on stage 2"'
@@ -385,13 +322,6 @@ def test_status_in_process_job():
 
 @insert_correct_pipeline
 def test_get_pipeline():
-    with get_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute("select type from stages")
-            b, = cur.fetchall()
-            for a in b:
-                print(a)
-    # response = client.get("/pipeline?pipeline_name=Authorization")
-    # print(response)
-    # assert response.status_code == 200
-    # assert response.content == b'"Job Authorization in process on stage 2"'
+    response = client.get("/pipeline?pipeline_name=Authorization")
+    assert response.status_code == 200
+    # assert json.loads(response.json()) == correct_body - спросить про заданные поля по умолчанию

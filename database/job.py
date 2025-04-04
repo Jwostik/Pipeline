@@ -1,4 +1,5 @@
 import json
+from pypika import PostgreSQLQuery, Table
 
 from database.db_connection import connect
 import exceptions
@@ -7,17 +8,19 @@ import exceptions
 @connect
 def create(pipeline_id: int, first_stage: int, job_body, curs=None) -> int:
     curs.execute(
-        "insert into jobs_status (pipeline_id, stage_id, job_status, data, started) values (%s, %s, %s, %s, %s) RETURNING job_status_id",
-        [pipeline_id, first_stage, 'waiting', json.dumps(job_body), False])
-    job_status_id = curs.fetchone()
-    curs.execute("insert into queue (job_status_id) values (%s)", [job_status_id])
+        PostgreSQLQuery.into('jobs_status').columns('pipeline_id', 'stage_id', 'job_status', 'data', 'started').insert(
+            pipeline_id, first_stage, 'waiting', json.dumps(job_body), False).returning(
+            'job_status_id').get_sql())
+    job_status_id, = curs.fetchone()
+    curs.execute(PostgreSQLQuery.into('queue').columns('job_status_id').insert(job_status_id).get_sql())
     return job_status_id
 
 
 @connect
 def get_status(job_id: int, curs=None) -> str:
-    curs.execute("select pipeline_id, stage_id, job_status, job_error from jobs_status where job_status_id = %s",
-                 [job_id])
+    jobs_status = Table('jobs_status')
+    curs.execute(PostgreSQLQuery.from_(jobs_status).select('pipeline_id', 'stage_id', 'job_status', 'job_error').where(
+        jobs_status.job_status_id == job_id).get_sql())
     fetch_result = curs.fetchone()
     if fetch_result is None:
         raise exceptions.NoJobException("Job with id " + str(job_id) + " does not exist")
@@ -26,8 +29,11 @@ def get_status(job_id: int, curs=None) -> str:
         return job_error
     if job_status == "success":
         return "Success"
-    curs.execute("select pipeline_name from pipelines where pipeline_id = %s", [pipeline_id])
+    pipelines = Table('pipelines')
+    curs.execute(
+        PostgreSQLQuery.from_(pipelines).select('pipeline_name').where(pipelines.pipeline_id == pipeline_id).get_sql())
     pipeline_name, = curs.fetchone()
-    curs.execute("select index_in_pipeline from stages where stage_id = %s", [stage_id])
+    stages = Table('stages')
+    curs.execute(PostgreSQLQuery.from_(stages).select('index_in_pipeline').where(stages.stage_id == stage_id).get_sql())
     index_in_pipeline, = curs.fetchone()
     return "Job " + pipeline_name + " " + job_status + " on stage " + str(index_in_pipeline)

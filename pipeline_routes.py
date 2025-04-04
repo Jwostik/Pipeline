@@ -22,7 +22,7 @@ async def error_middleware(request: Request, call_next):
     except exceptions.PipelineNameConflictException as e:
         return JSONResponse(status_code=409, content=e.args[0])
     except exceptions.NoStageException as e:
-        return JSONResponse(status_code=422, content=e.args[0])
+        return JSONResponse(status_code=400, content=e.args[0])
     except exceptions.QueryParameterException as e:
         return JSONResponse(status_code=422, content=e.args[0])
     except exceptions.NoPipelineException as e:
