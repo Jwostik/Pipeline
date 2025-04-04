@@ -5,6 +5,8 @@ info:
     This is a pipeline service that can create pipelines, start them and get status of runned job.
 
   version: 1.0.0
+servers:
+  - url: http://localhost:8000/
 tags:
   - name: pipelines
     description: Everything about pipelines
