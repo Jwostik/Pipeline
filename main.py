@@ -19,9 +19,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-with open("swagger.yaml") as file:
-    openapi = yaml.safe_load(file)
-    app.openapi_schema = openapi
+# with open("swagger.yaml") as file:
+#     openapi = yaml.safe_load(file)
+#     app.openapi_schema = openapi
 
 # abspath = os.path.abspath(__file__)
 # dname = os.path.dirname(abspath)

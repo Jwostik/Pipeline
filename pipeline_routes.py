@@ -1,18 +1,18 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Query
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 
 import service
-import json
 import exceptions
 from models import Pipeline
-from typing import Any
+from typing import Any, Annotated
 
 app = FastAPI()
 
+
 @app.exception_handler(RequestValidationError)
 async def custom_form_validation_error(request, exc):
-    return JSONResponse(status_code=400, content="Invalid request")
+    return JSONResponse(status_code=400, content=str(exc))
 
 
 @app.middleware("http")
@@ -23,8 +23,6 @@ async def error_middleware(request: Request, call_next):
         return JSONResponse(status_code=409, content=e.args[0])
     except exceptions.NoStageException as e:
         return JSONResponse(status_code=400, content=e.args[0])
-    except exceptions.QueryParameterException as e:
-        return JSONResponse(status_code=422, content=e.args[0])
     except exceptions.NoPipelineException as e:
         return JSONResponse(status_code=422, content=e.args[0])
     except exceptions.NoJobException as e:
@@ -39,27 +37,18 @@ async def create_pipeline(pipeline: Pipeline):
 
 
 @app.get("/pipeline")
-async def get_pipeline(request: Request):
-    if not request.query_params.get('pipeline_name'):
-        raise exceptions.QueryParameterException("No pipeline_name in query")
+async def get_pipeline(request: Request, pipeline_name: Annotated[str, Query()]):
     pipeline_name = request.query_params.get('pipeline_name')
     return service.get_pipeline(pipeline_name)
 
 
 @app.post("/job")
-async def start_job(request: Request, body: dict[str, Any]):
-    if not request.query_params.get('pipeline_name'):
-        raise exceptions.QueryParameterException("No pipeline_name in query")
+async def start_job(request: Request, body: dict[str, Any], pipeline_name: Annotated[str, Query()]):
     pipeline_name = request.query_params.get('pipeline_name')
     return service.start_job(body, pipeline_name)
 
 
 @app.get("/job")
-async def get_status_job(request: Request):
-    if not request.query_params.get('job_id'):
-        raise exceptions.QueryParameterException("No job_id in query")
-    job_id = request.query_params.get('job_id')
-    if not job_id.isdigit():
-        raise exceptions.QueryParameterException("job_id must be integer")
+async def get_status_job(request: Request, job_id: Annotated[int, Query()]):
     job_id = request.query_params.get('job_id')
     return service.get_status_job(int(job_id))
