@@ -3,12 +3,12 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 
 import service
+import json
 import exceptions
 from models import Pipeline
 from typing import Any
 
 app = FastAPI()
-
 
 @app.exception_handler(RequestValidationError)
 async def custom_form_validation_error(request, exc):
@@ -29,6 +29,8 @@ async def error_middleware(request: Request, call_next):
         return JSONResponse(status_code=422, content=e.args[0])
     except exceptions.NoJobException as e:
         return JSONResponse(status_code=422, content=e.args[0])
+    except Exception as e:
+        return JSONResponse(status_code=500, content=e.args[0])
 
 
 @app.post("/pipeline")

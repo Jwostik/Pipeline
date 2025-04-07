@@ -70,6 +70,8 @@ def drop_tables():
                 drop table stages cascade;
                 drop table jobs_status cascade;
                 drop table queue cascade;
+                drop table stage_type cascade;
+                drop table status_text cascade;
                 """)
             conn.commit()
 

@@ -2,11 +2,11 @@ import psycopg2.pool
 import os
 
 # эту часть в консоли прописать сначала или где-то задать?
-os.environ["DB_HOST"] = 'localhost'
-os.environ["DB_PORT"] = '5432'
-os.environ["DB_USERNAME"] = 'postgres'
-os.environ["DB_PASSWORD"] = 'postgres'
-os.environ["DB_NAME"] = 'tester'
+# os.environ["DB_HOST"] = 'localhost'
+# os.environ["DB_PORT"] = '5432'
+# os.environ["DB_USERNAME"] = 'postgres'
+# os.environ["DB_PASSWORD"] = 'postgres'
+# os.environ["DB_NAME"] = 'tester'
 
 host = os.getenv("DB_HOST")
 port = os.getenv("DB_PORT")

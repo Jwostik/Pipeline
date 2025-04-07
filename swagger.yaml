@@ -206,6 +206,7 @@ components:
                 return_values:
                   "jwt": ".jwt"
                 return_codes: [200]
+      "additionalProperties": False
 
     Stage:
       type: object
@@ -225,6 +226,8 @@ components:
           description: Parameters of stage
           oneOf:
             - $ref: '#/components/schemas/HTTPStage'
+      "additionalProperties": False
+
     HTTPStage:
       type: object
       required:
@@ -274,6 +277,8 @@ components:
           items:
             type: integer
           example: [200, 201]
+      "additionalProperties": False
+
     StartJobSchema:
       type: object
       additionalProperties:

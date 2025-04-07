@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Extra
 from typing import Union
 import json
 
@@ -17,12 +17,21 @@ class HTTPStage(BaseModel, StageAPI):
     return_values: Union[dict[str, str], None] = None
     return_codes: list[int]
 
+    class Config:
+        extra = Extra.forbid
+
 
 class Stage(BaseModel):
     type: str
     params: Union[HTTPStage]
 
+    class Config:
+        extra = Extra.forbid
+
 
 class Pipeline(BaseModel):
     pipeline_name: str
     stages: list[Stage]
+
+    class Config:
+        extra = Extra.forbid

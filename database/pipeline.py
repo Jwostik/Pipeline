@@ -57,4 +57,4 @@ def get(pipeline_name: str, curs=None) -> str:
     for stage_from_db in stages_from_db:
         stages.append({"type": stage_from_db[0], "params": stage_from_db[1]})
     response["stages"] = stages
-    return json.dumps(response)
+    return response

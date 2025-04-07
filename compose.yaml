@@ -1,0 +1,20 @@
+services:
+  pipeline:
+    image: pipeline_image:latest
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 54321
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: tester
+    ports:
+      - 8000:8000
+
+  postgres:
+      image: postgres
+      environment:
+        POSTGRES_DB: tester
+        POSTGRES_USER: postgres
+        POSTGRES_PASSWORD: 'postgres'
+      ports:
+        - 54321:5432
