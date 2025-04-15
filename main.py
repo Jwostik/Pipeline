@@ -1,12 +1,11 @@
 import os
 
 import uvicorn
-import yaml
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
-import pgmigrate
 
-load_dotenv()
+if os.getenv("DB_CONTAINER") is None:
+    load_dotenv()
 from pipeline_routes import app
 
 origins = ["*"]
@@ -19,14 +18,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# with open("swagger.yaml") as file:
-#     openapi = yaml.safe_load(file)
-#     app.openapi_schema = openapi
-
-# abspath = os.path.abspath(__file__)
-# dname = os.path.dirname(abspath)
-# os.chdir(dname)
-# os.system("pgmigrate -t latest migrate")
+os.chdir("pgmigrate")
+host = os.getenv("DB_HOST")
+port = os.getenv("DB_PORT")
+username = os.getenv("DB_USERNAME")
+password = os.getenv("DB_PASSWORD")
+dbname = os.getenv("DB_NAME")
+os.system(
+    f"pgmigrate -t latest -c \"host={host} dbname={dbname} user={username} password={password} port={port}\" migrate")
 
 if __name__ == '__main__':
     uvicorn.run(app)

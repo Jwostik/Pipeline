@@ -1,12 +1,10 @@
-import json
-
 import psycopg2.errors
+from pypika import PostgreSQLQuery, Table
 
+import database.stage
 import exceptions
 from database.db_connection import connect
 from models import Pipeline
-import database.stage
-from pypika import PostgreSQLQuery , Table
 
 
 @connect
@@ -40,13 +38,14 @@ def get_id_and_first_stage(pipeline_name: str, curs=None) -> (int, int):
 
 
 @connect
-def get(pipeline_name: str, curs=None) -> str:
+def get(pipeline_name: str, curs=None):
     pipelines = Table('pipelines')
     curs.execute(
         PostgreSQLQuery.from_(pipelines).select('pipeline_id').where(pipelines.pipeline_name == pipeline_name).get_sql())
-    pipeline_id, = curs.fetchone()
-    if pipeline_id is None:
+    fetch_result = curs.fetchone()
+    if fetch_result is None:
         raise exceptions.NoPipelineException("Pipeline " + pipeline_name + " does not exist")
+    pipeline_id = fetch_result[0]
     response = {"pipeline_name": pipeline_name}
     stages = Table('stages')
     curs.execute(

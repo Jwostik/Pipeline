@@ -17,7 +17,8 @@ create table jobs_status (
     stage_id bigint references stages(stage_id),
     job_status status_text,
     job_error text,
-    data jsonb,
-    started boolean);
+    data jsonb);
 create table queue (
-    job_status_id bigint references jobs_status(job_status_id));
+    stage_queue_id bigserial primary key,
+    job_status_id bigint references jobs_status(job_status_id),
+    started boolean default FALSE);

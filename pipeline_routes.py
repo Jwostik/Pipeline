@@ -1,11 +1,13 @@
-from fastapi import FastAPI, Request, Query
-from fastapi.responses import JSONResponse
-from fastapi.exceptions import RequestValidationError
-
-import service
-import exceptions
-from models import Pipeline
 from typing import Any, Annotated
+
+from fastapi import FastAPI, Request, Query
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+
+import exceptions
+import models
+import service
+from models import Pipeline
 
 app = FastAPI()
 
@@ -31,24 +33,24 @@ async def error_middleware(request: Request, call_next):
         return JSONResponse(status_code=500, content=e.args[0])
 
 
-@app.post("/pipeline")
+@app.post("/pipeline", responses=models.create_pipeline_responses)
 async def create_pipeline(pipeline: Pipeline):
     return service.create_pipeline(pipeline)
 
 
-@app.get("/pipeline")
+@app.get("/pipeline", responses=models.get_pipeline_responses)
 async def get_pipeline(request: Request, pipeline_name: Annotated[str, Query()]):
     pipeline_name = request.query_params.get('pipeline_name')
     return service.get_pipeline(pipeline_name)
 
 
-@app.post("/job")
+@app.post("/job", responses=models.start_job_responses)
 async def start_job(request: Request, body: dict[str, Any], pipeline_name: Annotated[str, Query()]):
     pipeline_name = request.query_params.get('pipeline_name')
     return service.start_job(body, pipeline_name)
 
 
-@app.get("/job")
+@app.get("/job", responses=models.get_status_job_responses)
 async def get_status_job(request: Request, job_id: Annotated[int, Query()]):
     job_id = request.query_params.get('job_id')
     return service.get_status_job(int(job_id))

@@ -1,5 +1,6 @@
-import psycopg2.pool
 import os
+
+import psycopg2.pool
 
 # эту часть в консоли прописать сначала или где-то задать?
 # os.environ["DB_HOST"] = 'localhost'

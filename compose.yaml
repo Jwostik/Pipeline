@@ -1,20 +1,25 @@
 services:
   pipeline:
     image: pipeline_image:latest
+    container_name: pipeline_image
     environment:
       DB_HOST: postgres
-      DB_PORT: 54321
-      DB_USERNAME: postgres
-      DB_PASSWORD: postgres
-      DB_NAME: tester
+      DB_PORT: 5432
+      DB_USERNAME: 'postgres'
+      DB_PASSWORD: 'postgres'
+      DB_NAME: 'tester'
+      DB_CONTAINER: 1
     ports:
       - 8000:8000
+    depends_on:
+      - postgres
 
   postgres:
-      image: postgres
-      environment:
-        POSTGRES_DB: tester
-        POSTGRES_USER: postgres
-        POSTGRES_PASSWORD: 'postgres'
-      ports:
-        - 54321:5432
+    image: postgres
+    container_name: postgres
+    environment:
+      POSTGRES_DB: 'tester'
+      POSTGRES_USER: 'postgres'
+      POSTGRES_PASSWORD: 'postgres'
+    volumes:
+      - /home/username/socket_dir:/var/run/postgresql
