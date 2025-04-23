@@ -26,9 +26,9 @@ async def error_middleware(request: Request, call_next):
     except exceptions.NoStageException as e:
         return JSONResponse(status_code=400, content=e.args[0])
     except exceptions.NoPipelineException as e:
-        return JSONResponse(status_code=422, content=e.args[0])
+        return JSONResponse(status_code=400, content=e.args[0])
     except exceptions.NoJobException as e:
-        return JSONResponse(status_code=422, content=e.args[0])
+        return JSONResponse(status_code=400, content=e.args[0])
     except Exception as e:
         return JSONResponse(status_code=500, content=e.args[0])
 

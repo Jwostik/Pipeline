@@ -9,6 +9,11 @@ class StageAPI:
         return json.dumps(self, default=lambda o: o.__dict__)
 
 
+class Forbidden(BaseModel):
+    class Config:
+        extra = Extra.forbid
+
+
 class StageType(str, Enum):
     http = 'HTTP'
 
@@ -20,33 +25,36 @@ class StatusText(str, Enum):
     error = 'error'
 
 
-class HTTPStage(BaseModel, StageAPI):
+class HTTPStageMethod(str, Enum):
+    post = "POST"
+    get = "GET"
+
+
+class HTTPStage(Forbidden, StageAPI):
     url_path: str
-    method: str
+    method: HTTPStageMethod
     path_params: Union[str, None] = None
     query_params: Union[str, None] = None
     body: Union[str, None] = None
     return_values: Union[dict[str, str], None] = None
     return_codes: list[int]
 
-    class Config:
-        extra = Extra.forbid
 
-
-class Stage(BaseModel):
+class Stage(Forbidden):
     type: StageType
     params: Union[HTTPStage]
 
-    class Config:
-        extra = Extra.forbid
 
-
-class Pipeline(BaseModel):
+class Pipeline(Forbidden):
     pipeline_name: str
     stages: list[Stage]
 
-    class Config:
-        extra = Extra.forbid
+
+class Migration:
+    def __init__(self, *, target=None, conn, base_dir=''):
+        self.target = target
+        self.conn = conn
+        self.base_dir = base_dir
 
 
 create_pipeline_responses = {

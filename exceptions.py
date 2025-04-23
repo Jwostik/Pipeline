@@ -16,3 +16,15 @@ class NoPipelineException(Exception):
 
 class NoJobException(Exception):
     pass
+
+
+class StageExecutionException(Exception):
+    pass
+
+
+class HTTPStageException(StageExecutionException):
+    pass
+
+
+class JQStringException(StageExecutionException):
+    pass
