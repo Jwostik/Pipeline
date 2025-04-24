@@ -1,4 +1,4 @@
-CREATE TYPE stage_type AS ENUM ('HTTP');
+CREATE TYPE stage_type AS ENUM ('HTTP', 'Postgres');
 CREATE TYPE status_text AS ENUM ('waiting', 'in process', 'success', 'error');
 CREATE TYPE http_stage_method AS ENUM ('POST', 'GET');
 create table pipelines (

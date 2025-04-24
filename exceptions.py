@@ -26,5 +26,9 @@ class HTTPStageException(StageExecutionException):
     pass
 
 
+class PostgresStageException(StageExecutionException):
+    pass
+
+
 class JQStringException(StageExecutionException):
     pass

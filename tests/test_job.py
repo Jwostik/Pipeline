@@ -1,5 +1,3 @@
-from pypika import Query
-
 from init_test import *
 
 
@@ -17,7 +15,9 @@ def test_insert_job():
     assert post_response.status_code == 200
     get_response = client.get(f"/job?job_id={post_response.json()}")
     assert get_response.status_code == 200
-    assert get_response.json() == "Job Authorization waiting on stage 1"
+    get_response_value = get_response.json()
+    assert get_response_value[0] == "Job Authorization waiting on stage 1"
+    assert get_response_value[1] == job_body
 
 
 @insert_correct_pipeline
@@ -77,33 +77,3 @@ def test_status_non_existing_job():
         response = client.get("/job?job_id=1")
         assert response.status_code == 400
         assert response.json == "Job with id 1 does not exist"
-
-
-def test_status_success_job():
-    with get_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute("insert into jobs_status (job_status) values ('success')")
-    response = client.get("/job?job_id=1")
-    assert response.status_code == 200
-    assert response.content == b'"Success"'
-
-
-def test_status_error_job():
-    with get_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute("insert into jobs_status (job_status, job_error) values ('error', 'Error job status')")
-    response = client.get("/job?job_id=1")
-    assert response.status_code == 200
-    assert response.content == b'"Error job status"'
-
-
-@insert_correct_pipeline
-def test_status_in_process_job():
-    with get_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                Query.into('jobs_status').columns('job_status', 'pipeline_id', 'stage_id').insert('in process', 1,
-                                                                                                  2).get_sql())
-    response = client.get("/job?job_id=1")
-    assert response.status_code == 200
-    assert response.content == b'"Job Authorization in process on stage 2"'

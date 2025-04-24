@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Extra
+from pydantic import BaseModel, Extra, Field
 from enum import Enum
 from typing import Union
 import json
@@ -16,6 +16,7 @@ class Forbidden(BaseModel):
 
 class StageType(str, Enum):
     http = 'HTTP'
+    postgres = 'Postgres'
 
 
 class StatusText(str, Enum):
@@ -31,23 +32,74 @@ class HTTPStageMethod(str, Enum):
 
 
 class HTTPStage(Forbidden, StageAPI):
-    url_path: str
-    method: HTTPStageMethod
-    path_params: Union[str, None] = None
-    query_params: Union[str, None] = None
-    body: Union[str, None] = None
-    return_values: Union[dict[str, str], None] = None
-    return_codes: list[int]
+    url_path: str = Field(
+        description="URL-path to service",
+        example="server.com/users"
+    )
+    method: HTTPStageMethod = Field(
+        description="HTTP-method of request"
+    )
+    path_params: Union[str, None] = Field(
+        default=None,
+        description="String with jq filters needed to convert path params of stage from incoming data",
+        example='"/fixed/" + .path1 + "/fixed/" + .path2'
+    )
+    query_params: Union[str, None] = Field(
+        default=None,
+        description="String with jq filters needed to convert query params of stage from incoming data",
+        example='"query1=" + .query1 + "&query2=" + .query2'
+    )
+    body: Union[str, None] = Field(
+        default=None,
+        description="String with jq filters needed to convert data needed in stage from incoming data",
+        example='{login: .login, password: .password}'
+    )
+    return_values: Union[dict[str, str], None] = Field(
+        default=None,
+        description="HashMap of keys of return values of stage with jq filters needed to "
+                    "transform them to data send to next stage",
+        example={
+            "user_id": ".hello"
+        }
+    )
+    return_codes: list[int] = Field(
+        description="Correct HTTP-response codes to continue execute stages",
+        example=[200]
+    )
+
+
+class PostgresStage(Forbidden, StageAPI):
+    connection: str = Field(
+        description="Jq string consist of connection string to Postgres database",
+        example='"host=" + .host + " dbname=" + .dbname + " user=" + .username + '
+                '" password=" + .password + " port=" + .port'
+    )
+    query: str = Field(
+        description="Jq string consist of database query",
+        example='"select " + .first + ", " + .second " from " + .db_name + ";"'
+    )
+    return_values: Union[dict[str, str], None] = Field(
+        default=None,
+        description="HashMap of keys of return values of stage with jq filters "
+                    "needed to transform them to data send to next stage",
+        example={
+            "user_id": ".hello"
+        }
+    )
 
 
 class Stage(Forbidden):
     type: StageType
-    params: Union[HTTPStage]
+    params: Union[HTTPStage, PostgresStage]
 
 
 class Pipeline(Forbidden):
-    pipeline_name: str
-    stages: list[Stage]
+    pipeline_name: str = Field(
+        description="Name of pipeline"
+    )
+    stages: list[Stage] = Field(
+        description="Array of stages of pipeline"
+    )
 
 
 class Migration:

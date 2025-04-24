@@ -16,7 +16,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-migrations_dir = 'pgmigrate'
+migrations_dir = 'pgmigrate_folder'
 host = os.getenv("DB_HOST")
 port = os.getenv("DB_PORT")
 username = os.getenv("DB_USERNAME")

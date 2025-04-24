@@ -1,12 +1,11 @@
-import json
-
 from pypika import PostgreSQLQuery, Table
 import jq
 import requests
 
-from models import Stage, HTTPStage
-from exceptions import HTTPStageException, JQStringException
+from models import Stage
+from exceptions import HTTPStageException, JQStringException, PostgresStageException
 from typing import Any
+import psycopg2
 
 
 def create(pipeline_id: int, stage_index_in_pipeline: int, stage: Stage, curs=None) -> int:
@@ -28,6 +27,8 @@ def execute(stage_id: int, data, curs=None):
     pipeline_id, index_in_pipeline, params, stage_type = curs.fetchone()
     if stage_type == "HTTP":
         data = http_execute(params, data)
+    elif stage_type == "Postgres":
+        data = postgres_execute(params, data)
     curs.execute(PostgreSQLQuery.
                  from_(stage_table).
                  select('stage_id').
@@ -43,7 +44,7 @@ def execute(stage_id: int, data, curs=None):
     return next_stage, data
 
 
-def transform_json(params: str, data: dict[str, Any]) -> str:
+def transform_json(params: str, data: Any) -> str:
     if params is None:
         return ''
     try:
@@ -52,7 +53,7 @@ def transform_json(params: str, data: dict[str, Any]) -> str:
         raise JQStringException("Invalid jq string: " + str(e))
 
 
-def http_execute(params: HTTPStage, data: dict[str, Any]) -> dict[str, Any]:
+def http_execute(params: dict[str, Any], data: dict[str, Any]) -> dict[str, Any]:
     path = transform_json(params["path_params"], data)
     if path and path[0] == '/':
         path = path[1:]
@@ -70,19 +71,36 @@ def http_execute(params: HTTPStage, data: dict[str, Any]) -> dict[str, Any]:
 
     try:
         if params["method"] == "POST":
-            response = requests.post(url_path, data=body, verify=False) #SSL все ломает, поэтому минус верификация
+            response = requests.post(url_path, json=body, verify=False) #SSL все ломает, поэтому минус верификация
         elif params["method"] == "GET":
-            response = requests.get(url_path, data=body)
+            response = requests.get(url_path, verify=False)
     except Exception as e:
-        raise e #добавить обработчик, если не получился запрос
+        raise HTTPStageException(str(e))
 
     if response.status_code not in params["return_codes"]:
-        raise HTTPStageException("Invalid return code of stage")
+        raise HTTPStageException("Invalid return code of stage: " + str(response.status_code) + ' ' + str(response.content))
 
     try:
-        response_value = response.json()
+        response_data = response.json()
     except Exception as e:
-        raise e #добавить обработчик, если не получился запрос
+        raise HTTPStageException(str(e))
     for key, jq_string in params["return_values"].items():
-        data[key] = transform_json(jq_string, response_value)
+        data[key] = transform_json(jq_string, response_data)
+    return data
+
+
+def postgres_execute(params: dict[str, Any], data: dict[str, Any]) -> dict[str, Any]:
+    connection = transform_json(params["connection"], data)
+    query = transform_json(params["query"], data)
+    try:
+        with psycopg2.connect(connection) as conn:
+            with conn.cursor() as cur:
+                cur.execute(query)
+                if params["return_values"] is not None:
+                    response_data = cur.fetchall()
+                    for key, jq_string in params["return_values"].items():
+                        data[key] = transform_json(jq_string, response_data)
+                conn.commit()
+    except Exception as e:
+        raise PostgresStageException(str(e))
     return data

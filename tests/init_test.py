@@ -6,6 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 from testcontainers.postgres import PostgresContainer
 from pgmigrate import get_config, migrate, clean
+
 import models
 
 postgres = PostgresContainer("postgres:16")
@@ -20,7 +21,7 @@ os.environ["DB_NAME"] = postgres.dbname
 from pipeline_routes import app
 
 client = TestClient(app)
-migrations_dir = "../pgmigrate"
+migrations_dir = "../pgmigrate_folder"
 
 
 def get_connection():
