@@ -1,4 +1,5 @@
 CREATE TYPE stage_type AS ENUM ('HTTP', 'Postgres');
+CREATE TYPE status_stage AS ENUM ('waiting', 'started', 'done');
 CREATE TYPE status_text AS ENUM ('waiting', 'in process', 'success', 'error');
 CREATE TYPE http_stage_method AS ENUM ('POST', 'GET');
 create table pipelines (
@@ -22,4 +23,5 @@ create table jobs_status (
 create table queue (
     stage_queue_id bigserial primary key,
     job_status_id bigint references jobs_status(job_status_id),
-    started boolean default FALSE);
+    status status_stage default 'waiting',
+    started_time timestamp default CURRENT_TIMESTAMP);

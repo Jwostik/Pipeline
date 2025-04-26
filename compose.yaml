@@ -25,6 +25,18 @@ services:
     depends_on:
       - postgres
 
+  healthchecker:
+    image: healthchecker_image:latest
+    container_name: healthchecker_image
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: 'postgres'
+      DB_PASSWORD: 'postgres'
+      DB_NAME: 'tester'
+    depends_on:
+      - postgres
+
   postgres:
     image: postgres
     container_name: postgres

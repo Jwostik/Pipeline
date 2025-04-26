@@ -1,3 +1,6 @@
+import datetime
+import time
+
 from wiremock.resources.mappings import HttpMethods
 from wiremock.testing.testcontainer import wiremock_container
 
@@ -116,8 +119,7 @@ def test_execute_post_pipeline():
 
 def test_postgres_pipeline():
     insert_pipeline(postgres_stages)
-    postgres_test = PostgresContainer("postgres:16")
-    postgres_test.start()
+    postgres_test = PostgresContainer("postgres:16").start()
     body = {
         "host": postgres_test.get_container_host_ip(),
         "port": postgres_test.get_exposed_port(5432),
@@ -141,15 +143,4 @@ def test_postgres_pipeline():
     assert response_value[1]['stage_3'] == 'completed'
     assert response_value[1]["first"] == [1, 'first']
     assert response_value[1]["second"] == [2, 'second']
-
-# @insert_correct_pipeline
-# @insert_correct_job
-# @insert_correct_job
-# def test_execute():
-#     database.stage_queue.execute_all()
-#     response = client.get("/job?job_id=1")
-#     assert response.status_code == 200
-#     assert response.json() == "Success"
-#     response = client.get("/job?job_id=2")
-#     assert response.status_code == 200
-#     assert response.json() == "Success"
+    postgres_test.stop()

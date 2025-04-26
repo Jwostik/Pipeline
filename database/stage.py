@@ -96,7 +96,7 @@ def postgres_execute(params: dict[str, Any], data: dict[str, Any]) -> dict[str, 
         with psycopg2.connect(connection) as conn:
             with conn.cursor() as cur:
                 cur.execute(query)
-                if params["return_values"] is not None:
+                if cur.rowcount > 0:
                     response_data = cur.fetchall()
                     for key, jq_string in params["return_values"].items():
                         data[key] = transform_json(jq_string, response_data)

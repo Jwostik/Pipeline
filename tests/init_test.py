@@ -9,8 +9,7 @@ from pgmigrate import get_config, migrate, clean
 
 import models
 
-postgres = PostgresContainer("postgres:16")
-postgres.start()
+postgres = PostgresContainer("postgres:16").start()
 
 os.environ["DB_HOST"] = postgres.get_container_host_ip()
 os.environ["DB_PORT"] = postgres.get_exposed_port(5432)
@@ -42,10 +41,20 @@ def drop_tables():
                 drop table jobs_status cascade;
                 drop table queue cascade;
                 drop type stage_type cascade;
+                drop type status_stage cascade;
                 drop type status_text cascade;
                 drop type http_stage_method;
                 """)
             conn.commit()
+
+
+@pytest.fixture(scope="module")
+def finalizer(request):
+    def fin():
+        postgres.stop()
+
+    request.addfinalizer(fin)
+    return finalizer
 
 
 @pytest.fixture(scope="function", autouse=True)

@@ -2,6 +2,7 @@ from pydantic import BaseModel, Extra, Field
 from enum import Enum
 from typing import Union
 import json
+from threading import Timer
 
 
 class StageAPI:
@@ -107,6 +108,12 @@ class Migration:
         self.target = target
         self.conn = conn
         self.base_dir = base_dir
+
+
+class RepeatTimer(Timer):
+    def run(self):
+        while not self.finished.wait(self.interval):
+            self.function(*self.args, **self.kwargs)
 
 
 create_pipeline_responses = {
