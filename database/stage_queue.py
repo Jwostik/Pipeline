@@ -51,19 +51,15 @@ def healthcheck(interval: int, curs=None):
                  where(queue_table.status == 'done').
                  where(queue_table.started_time < control_date).
                  get_sql())
+
     curs.execute(PostgreSQLQuery.
                  from_(queue_table).
                  select(queue_table.job_status_id).
+                 where(queue_table.status == 'started').
                  where(queue_table.started_time < control_date).
                  get_sql())
     if curs.rowcount > 0:
         print("Consumer dead")
-        curs.execute(PostgreSQLQuery.
-                     from_(queue_table).
-                     select(queue_table.job_status_id).
-                     where(queue_table.status == 'started').
-                     where(queue_table.started_time < control_date).
-                     get_sql())
         jobs_table = Table("jobs")
         for job_id in curs.fetchall():
             curs.execute(PostgreSQLQuery.

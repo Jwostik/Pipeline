@@ -6,6 +6,11 @@ from models import Stage
 from exceptions import HTTPStageException, JQStringException, PostgresStageException
 from typing import Any
 import psycopg2
+from prometheus_client import Counter, Histogram
+
+
+all_stages = Counter('all_stages', 'A counter of all stages made')
+stages_time = Histogram('stages_time', 'Time spent to stages')
 
 
 def create(pipeline_id: int, stage_index_in_pipeline: int, stage: Stage, curs=None) -> int:
@@ -25,10 +30,12 @@ def execute(stage_id: int, data, curs=None):
                  select('pipeline_id', 'index_in_pipeline', 'params', 'type').
                  where(stage_table.stage_id == stage_id).get_sql())
     pipeline_id, index_in_pipeline, params, stage_type = curs.fetchone()
-    if stage_type == "HTTP":
-        data = http_execute(params, data)
-    elif stage_type == "Postgres":
-        data = postgres_execute(params, data)
+    with stages_time.time():
+        if stage_type == "HTTP":
+            data = http_execute(params, data)
+        elif stage_type == "Postgres":
+            data = postgres_execute(params, data)
+    all_stages.inc()
     curs.execute(PostgreSQLQuery.
                  from_(stage_table).
                  select('stage_id').

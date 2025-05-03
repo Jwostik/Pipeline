@@ -1,6 +1,7 @@
 fastapi[standard]==0.115.12
 starlette==0.45.3
 psycopg2==2.9.10
+psycopg2-binary==2.9.10
 pydantic==2.11.2
 pypika==0.48.9
 pytest==8.3.4
@@ -30,4 +31,5 @@ zipp~=3.21.0
 sqlparse~=0.5.3
 wiremock~=2.6.1
 jq~=1.8.0
-yandex--pgmigrate~=1.0.9
+yandex-pgmigrate~=1.0.9
+prometheus-client~=0.21.1

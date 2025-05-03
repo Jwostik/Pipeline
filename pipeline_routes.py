@@ -3,6 +3,7 @@ from typing import Any, Annotated
 from fastapi import FastAPI, Request, Query
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from prometheus_client import Counter, make_asgi_app
 
 import exceptions
 import models
@@ -10,6 +11,10 @@ import service
 from models import Pipeline
 
 app = FastAPI()
+
+metrics_app = make_asgi_app()
+app.mount("/metrics", metrics_app)
+http_requests = Counter('http_requests', 'A counter of all http requests made')
 
 
 @app.exception_handler(RequestValidationError)
@@ -20,6 +25,7 @@ async def custom_form_validation_error(request, exc):
 @app.middleware("http")
 async def error_middleware(request: Request, call_next):
     try:
+        http_requests.inc()
         return await call_next(request)
     except exceptions.PipelineNameConflictException as e:
         return JSONResponse(status_code=409, content=e.args[0])
