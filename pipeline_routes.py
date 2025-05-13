@@ -1,8 +1,12 @@
+import logging
+from multiprocessing import Queue
+import os
 from typing import Any, Annotated
 
 from fastapi import FastAPI, Request, Query
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from logging_loki import LokiHandler
 from prometheus_client import Counter, make_asgi_app
 
 import exceptions
@@ -15,6 +19,18 @@ app = FastAPI()
 metrics_app = make_asgi_app()
 app.mount("/metrics", metrics_app)
 http_requests = Counter('http_requests', 'A counter of all http requests made')
+
+handler = LokiHandler(
+    url=os.getenv("LOKI_ENDPOINT"),
+    tags={"application": "my-app"},
+    version="1",
+)
+
+
+@app.on_event("startup")
+async def startup_event():
+    logger = logging.getLogger("uvicorn.access")
+    logger.addHandler(handler)
 
 
 @app.exception_handler(RequestValidationError)

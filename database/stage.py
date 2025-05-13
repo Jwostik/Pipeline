@@ -78,7 +78,7 @@ def http_execute(params: dict[str, Any], data: dict[str, Any]) -> dict[str, Any]
 
     try:
         if params["method"] == "POST":
-            response = requests.post(url_path, json=body, verify=False) #SSL все ломает, поэтому минус верификация
+            response = requests.post(url_path, json=body, verify=False)
         elif params["method"] == "GET":
             response = requests.get(url_path, verify=False)
     except Exception as e:
@@ -103,7 +103,7 @@ def postgres_execute(params: dict[str, Any], data: dict[str, Any]) -> dict[str, 
         with psycopg2.connect(connection) as conn:
             with conn.cursor() as cur:
                 cur.execute(query)
-                if cur.rowcount > 0:
+                if cur.statusmessage[:6] == 'SELECT':
                     response_data = cur.fetchall()
                     for key, jq_string in params["return_values"].items():
                         data[key] = transform_json(jq_string, response_data)

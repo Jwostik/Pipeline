@@ -39,4 +39,4 @@ ENV PYTHONUNBUFFERED=1
 ENV VIRTUAL_ENV=/home/myuser/venv
 ENV PATH="/home/myuser/venv/bin:$PATH"
 
-CMD ["fastapi", "run", "_main.py", "--port", "8000"]
+ENTRYPOINT ["./docker_entrypoint.sh"]

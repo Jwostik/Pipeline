@@ -1,24 +1,21 @@
 import os
+import time
 
 import psycopg2.pool
-
-# эту часть в консоли прописать сначала или где-то задать?
-# os.environ["DB_HOST"] = 'localhost'
-# os.environ["DB_PORT"] = '5432'
-# os.environ["DB_USERNAME"] = 'postgres'
-# os.environ["DB_PASSWORD"] = 'postgres'
-# os.environ["DB_NAME"] = 'tester'
 
 host = os.getenv("DB_HOST")
 port = os.getenv("DB_PORT")
 username = os.getenv("DB_USERNAME")
 password = os.getenv("DB_PASSWORD")
 dbname = os.getenv("DB_NAME")
-pool = psycopg2.pool.SimpleConnectionPool(1, 5,
+while True:
+    try:
+        pool = psycopg2.pool.SimpleConnectionPool(1, 5,
                                           f"host={host} dbname={dbname} user={username} password={password} port={port}")
-
-
-# pool = psycopg2.pool.SimpleConnectionPool(1, 5, user='postgres', password='postgres', database='tester')
+        break
+    except psycopg2.OperationalError:
+        print("Database is unreachable. Trying to reconnect")
+        time.sleep(5)
 
 
 def connect(func):
@@ -31,6 +28,8 @@ def connect(func):
             kwargs['curs'] = curs
             result = func(*args, **kwargs)
             conn.commit()
+        except psycopg2.OperationalError:
+            raise psycopg2.OperationalError("Database is unreachable. Try later")
         finally:
             if curs:
                 curs.close()

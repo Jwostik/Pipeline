@@ -48,13 +48,14 @@ def drop_tables():
             conn.commit()
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session", autouse=True)
 def finalizer(request):
     def fin():
+        print('fin')
         postgres.stop()
 
     request.addfinalizer(fin)
-    return finalizer
+    return
 
 
 @pytest.fixture(scope="function", autouse=True)

@@ -1,33 +1,23 @@
 services:
   pipeline:
     image: pipeline_image:latest
-    container_name: pipeline_image
+    container_name: pipeliner
     environment:
       DB_HOST: postgres
       DB_PORT: 5432
       DB_USERNAME: 'postgres'
       DB_PASSWORD: 'postgres'
       DB_NAME: 'tester'
+      LOKI_ENDPOINT: 'http://loki:3100/loki/api/v1/push'
     ports:
       - 8000:8000
     depends_on:
       - postgres
+      - loki
 
   consumer:
     image: consumer_image:latest
-    container_name: consumer_image
-    environment:
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_USERNAME: 'postgres'
-      DB_PASSWORD: 'postgres'
-      DB_NAME: 'tester'
-    depends_on:
-      - postgres
-
-  healthchecker:
-    image: healthchecker_image:latest
-    container_name: healthchecker_image
+    container_name: consumer
     environment:
       DB_HOST: postgres
       DB_PORT: 5432
@@ -47,6 +37,12 @@ services:
     volumes:
       - /home/username/socket_dir:/var/run/postgresql
 
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    ports:
+      - 3100:3100
+
   prometheus:
     image: prom/prometheus
     container_name: prometheus
@@ -62,3 +58,6 @@ services:
     container_name: grafana
     ports:
       - 3000:3000
+    depends_on:
+      - loki
+

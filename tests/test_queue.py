@@ -1,6 +1,3 @@
-import datetime
-import time
-
 from wiremock.resources.mappings import HttpMethods
 from wiremock.testing.testcontainer import wiremock_container
 
