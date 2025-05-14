@@ -24,6 +24,6 @@ jobs:
        # Устанавливаем зависимости
        run: pip install -r requirements.txt
      - name: Run tests
-       run: coverage run src/tests
+       run: python -m coverage run src/tests
      - name: Tests report
        run: coverage report
