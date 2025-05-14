@@ -1,12 +1,18 @@
-[tool.poetry]
-name = "pipeliner"
-packages = [
-    { include = "pipeliner" },
-]
+[project]
+name = "jwostik-pipeliner"
 version = "1.0.0"
-description = ""
-authors = ["Jwostik"]
+authors = [
+  { name="Jwostik"},
+]
+description = "THE PIPELINER"
+requires-python = ">=3.9"
+
+[project.urls]
+Homepage = "https://github.com/Jwostik/Pipeline"
 
 [build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["setuptools >= 77.0.3"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = []
