@@ -20,7 +20,7 @@ os.environ["DB_NAME"] = postgres.dbname
 from pipeline_routes import app
 
 client = TestClient(app)
-migrations_dir = "../pgmigrate_folder"
+migrations_dir = "pgmigrate_folder"
 
 
 def get_connection():
@@ -46,16 +46,6 @@ def drop_tables():
                 drop type http_stage_method;
                 """)
             conn.commit()
-
-
-@pytest.fixture(scope="session", autouse=True)
-def finalizer(request):
-    def fin():
-        print('fin')
-        postgres.stop()
-
-    request.addfinalizer(fin)
-    return
 
 
 @pytest.fixture(scope="function", autouse=True)
