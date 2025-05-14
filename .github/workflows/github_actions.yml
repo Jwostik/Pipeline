@@ -39,6 +39,7 @@ jobs:
         run: docker push $LOGIN/$NAME:${GITHUB_REF:11}
 
   publish:
+    needs: [ run_tests ]
     strategy:
       fail-fast: false
       matrix:
